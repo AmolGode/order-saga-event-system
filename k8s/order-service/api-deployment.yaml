@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service-api
+  template:
+    metadata:
+      labels:
+        app: order-service-api
+    spec:
+      containers:
+        - name: order-service-api
+          # Placeholder — for real EKS this must be the ECR repo URL from
+          # `terraform output ecr_repository_urls`, with a real build tag
+          # (git SHA or build number), not :latest. IMMUTABLE tag mutability
+          # is set on the ECR repo specifically so :latest-style overwrites
+          # aren't even possible — pushing requires a new tag every time.
+          # Local Minikube/kind testing can keep the docker-compose image
+          # name as-is.
+          image: order-saga-event-system-order-service-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: order-service-api-secret
+          env:
+            - name: POSTGRES_HOST
+              value: order-db
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka-broker:9092
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz/
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz/
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15

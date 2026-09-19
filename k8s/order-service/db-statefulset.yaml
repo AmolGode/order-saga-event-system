@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: order-db
+spec:
+  serviceName: order-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-db
+  template:
+    metadata:
+      labels:
+        app: order-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: order-service-api-secret
+          env:
+            # Some storage provisioners drop a lost+found dir at the mount
+            # root, which makes Postgres's initdb refuse to start ("data
+            # directory has files but is missing PG_VERSION"). Pointing
+            # PGDATA at a subdirectory sidesteps that entirely.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: order-db-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: order-db-storage
+          persistentVolumeClaim:
+            claimName: order-db-pvc

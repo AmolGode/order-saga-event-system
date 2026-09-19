@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service-worker
+  template:
+    metadata:
+      labels:
+        app: order-service-worker
+    spec:
+      containers:
+        - name: order-service-worker
+          image: order-saga-event-system-order-service-worker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9100
+          envFrom:
+            - secretRef:
+                name: order-service-worker-secret
+          env:
+            - name: POSTGRES_HOST
+              value: order-db
+            - name: KAFKA_BROKERS
+              value: kafka-broker:9092
+            - name: KAFKA_GROUP_ID
+              value: order-service-worker
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9100
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9100
+            initialDelaySeconds: 10
+            periodSeconds: 15

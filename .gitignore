@@ -1,0 +1,27 @@
+# Personal scratch/planning notes — not meant to be shared via git
+_gitignore/
+
+# Secrets — real DB passwords live here, never commit this
+.env
+
+# Python
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/staticfiles/
+
+# Node
+**/node_modules/
+**/dist/
+dashboard_fe/.env
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+!terraform/*.tfvars.example
+
+# OS / editor
+.DS_Store
+.idea/

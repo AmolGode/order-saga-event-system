@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # Django APIs — django-prometheus exposes /metrics on the same port they
+  # already serve on (internal port 8000, not the host-published one).
+  - job_name: order-service-api
+    static_configs:
+      - targets: ['order-service-api:8000']
+
+  - job_name: inventory-service-api
+    static_configs:
+      - targets: ['inventory-service-api:8000']
+
+  - job_name: payment-service-api
+    static_configs:
+      - targets: ['payment-service-api:8000']
+
+  - job_name: analytics-service-api
+    static_configs:
+      - targets: ['analytics-service-api:8000']
+
+  # Go workers — each runs its own small /metrics server on :9100.
+  - job_name: order-service-worker
+    static_configs:
+      - targets: ['order-service-worker:9100']
+
+  - job_name: inventory-service-worker
+    static_configs:
+      - targets: ['inventory-service-worker:9100']
+
+  - job_name: payment-service-worker
+    static_configs:
+      - targets: ['payment-service-worker:9100']
+
+  - job_name: analytics-service-worker
+    static_configs:
+      - targets: ['analytics-service-worker:9100']
+
+  # Kafka consumer group lag, read from the broker by kafka-exporter.
+  - job_name: kafka-exporter
+    static_configs:
+      - targets: ['kafka-exporter:9308']
