@@ -1,36 +1,15 @@
 package main
 
 import (
-	"strconv"
-
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-const maxRetries = 3
-const retryCountHeader = "retry-count"
-
-func retryCount(msg *kafka.Message) int {
-	for _, h := range msg.Headers {
-		if h.Key == retryCountHeader {
-			n, _ := strconv.Atoi(string(h.Value))
-			return n
-		}
-	}
-	return 0
-}
-
-// handleFailure decides whether to retry (republish the same message with an
-// incremented retry-count header) or give up and route it to the topic's
-// dead-letter queue after maxRetries attempts.
+// handleFailure sends a message straight to its topic's dead-letter queue
+// on any handler failure — no in-place retry loop. Kafka already redelivers
+// on its own if the consumer never gets to commit (e.g. a crash mid-handler),
+// so a retry-count header on top of that was extra bookkeeping, not extra
+// safety.
 func handleFailure(msg *kafka.Message) error {
-	attempt := retryCount(msg) + 1
 	topic := *msg.TopicPartition.Topic
-
-	if attempt >= maxRetries {
-		return PublishRaw(topic+"-dlq", msg.Value, nil)
-	}
-
-	return PublishRaw(topic, msg.Value, []kafka.Header{
-		{Key: retryCountHeader, Value: []byte(strconv.Itoa(attempt))},
-	})
+	return PublishRaw(topic+"-dlq", msg.Value)
 }

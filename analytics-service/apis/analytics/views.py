@@ -1,7 +1,19 @@
+from django.db import connection
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from .models import AnalyticsEvent
+
+
+class HealthCheck(APIView):
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        except Exception as exc:
+            return Response({"status": "unhealthy", "error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response({"status": "ok"})
 
 
 def serialize_event(e):

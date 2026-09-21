@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+spec:
+  clusterIP: None # headless — standard pairing for a StatefulSet, gives stable pod DNS
+  selector:
+    app: payment-db
+  ports:
+    - port: 5432
+      targetPort: 5432

@@ -17,11 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from payments.views import PaymentListView, ProcessedEventListView
+from payments.views import HealthCheck, PaymentListView, ProcessedEventListView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/payments/', PaymentListView.as_view()),
     path('api/processed-events/', ProcessedEventListView.as_view()),
+    path('healthz/', HealthCheck.as_view()),
     path('', include('django_prometheus.urls')),
 ]

@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS region for the load-test environment."
   type        = string
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 variable "cluster_name" {
@@ -81,31 +81,27 @@ variable "secondary_db_instance_class" {
 }
 
 # --- DB passwords ---
-# Defaulted to match your existing .env so `terraform apply` works with no
-# extra input. For anything beyond a personal throwaway test, override these
-# via a .tfvars file (gitignored) or pull from SSM Parameter Store /
-# Secrets Manager instead of a plaintext default in version control.
+# No default on purpose — a plaintext default here would be a real secret
+# checked into version control regardless of `sensitive = true` (that only
+# redacts CLI/plan output). Pass these via a gitignored terraform.tfvars
+# (copy terraform.tfvars.example) or pull from Secrets Manager/SSM instead.
 
 variable "order_db_password" {
   type      = string
-  default   = "Pass@123"
   sensitive = true
 }
 
 variable "inventory_db_password" {
   type      = string
-  default   = "Pass@123"
   sensitive = true
 }
 
 variable "payment_db_password" {
   type      = string
-  default   = "Pass@123"
   sensitive = true
 }
 
 variable "analytics_db_password" {
   type      = string
-  default   = "Pass@123"
   sensitive = true
 }

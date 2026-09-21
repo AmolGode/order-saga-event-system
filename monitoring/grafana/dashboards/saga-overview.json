@@ -14,7 +14,7 @@
       "id": 1,
       "title": "Order API requests/sec",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
       "targets": [
         {
@@ -27,88 +27,23 @@
     },
     {
       "id": 2,
-      "title": "Order success/fail rate",
+      "title": "DB reads/writes per sec, per service",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "sum(rate(orders_processed_total[1m])) by (status)",
-          "legendFormat": "{{status}}"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
-    },
-    {
-      "id": 3,
-      "title": "Kafka consumer lag per group",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "sum(kafka_consumergroup_lag) by (consumergroup)",
-          "legendFormat": "{{consumergroup}}"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
-    },
-    {
-      "id": 4,
-      "title": "DB write latency (p95) by service",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "histogram_quantile(0.95, sum(rate(db_write_duration_seconds_bucket[5m])) by (le, job, operation))",
-          "legendFormat": "{{job}} / {{operation}}"
+          "expr": "sum(rate(django_db_query_duration_seconds_count[1m])) by (job)",
+          "legendFormat": "{{job}} - queries (api)"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "histogram_quantile(0.95, sum(rate(django_db_query_duration_seconds_bucket[5m])) by (le, job))",
-          "legendFormat": "{{job}} (django queries)"
+          "expr": "sum(rate(db_write_duration_seconds_count[1m])) by (job)",
+          "legendFormat": "{{job}} - writes (worker)"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
-    },
-    {
-      "id": 5,
-      "title": "Saga completion latency (p50/p95)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "histogram_quantile(0.50, sum(rate(saga_completion_duration_seconds_bucket[5m])) by (le, outcome))",
-          "legendFormat": "p50 {{outcome}}"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "histogram_quantile(0.95, sum(rate(saga_completion_duration_seconds_bucket[5m])) by (le, outcome))",
-          "legendFormat": "p95 {{outcome}}"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
-    },
-    {
-      "id": 6,
-      "title": "Idempotency hits/sec",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "sum(rate(idempotency_hits_total[1m])) by (job, operation)",
-          "legendFormat": "{{job}} / {{operation}}"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+      "fieldConfig": { "defaults": { "unit": "qps" }, "overrides": [] }
     }
   ]
 }

@@ -17,12 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from analytics.views import DeadLetterListView, EventListView, OrderListView
+from analytics.views import DeadLetterListView, EventListView, HealthCheck, OrderListView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/events/', EventListView.as_view()),
     path('api/orders/', OrderListView.as_view()),
     path('api/dead-letters/', DeadLetterListView.as_view()),
+    path('healthz/', HealthCheck.as_view()),
     path('', include('django_prometheus.urls')),
 ]

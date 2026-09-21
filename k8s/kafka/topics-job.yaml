@@ -1,0 +1,47 @@
+# Auto-create is disabled on the brokers (KAFKA_AUTO_CREATE_TOPICS_ENABLE:
+# false, same as docker-compose) — every topic the services actually publish
+# to/consume from (grepped from the Go workers' source, including the DLQ
+# topics the retry/DLQ pattern writes to) has to be created explicitly.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-create-topics
+spec:
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-topics
+          image: apache/kafka:4.3.1
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              BOOTSTRAP=kafka-broker-0.kafka-broker:9092
+
+              until /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server "$BOOTSTRAP" >/dev/null 2>&1; do
+                echo "waiting for kafka-broker quorum to be reachable..."
+                sleep 5
+              done
+
+              for topic in \
+                order-requested \
+                payment-requested \
+                inventory-checked \
+                inventory-failed \
+                payment-success \
+                payment-failed \
+                order-requested-dlq \
+                payment-requested-dlq \
+                inventory-failed-dlq \
+                payment-success-dlq \
+                payment-failed-dlq \
+              ; do
+                echo "creating topic: $topic"
+                /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
+                  --bootstrap-server "$BOOTSTRAP" \
+                  --topic "$topic" \
+                  --partitions 3 \
+                  --replication-factor 3
+              done

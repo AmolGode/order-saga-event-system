@@ -19,7 +19,3 @@ curl -X POST http://localhost:8100/orders/create_order/ \
 
 
 
-# See First Offset / Next Offset per partition (topic overview, via CLI)
-docker compose exec kafka-broker /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server localhost:9092 --topic order-requested --time -2   # First Offset (earliest)
-docker compose exec kafka-broker /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server localhost:9092 --topic order-requested --time -1   # Next Offset (latest)
-# Message count = Next Offset - First Offset (per partition)

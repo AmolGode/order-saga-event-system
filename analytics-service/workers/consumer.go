@@ -31,7 +31,7 @@ func StartConsumer(cfg Config, db *DB) {
 		"inventory-failed",
 		"payment-success",
 		"payment-failed",
-		// dead-letter topics — a message lands here after 3 failed retries
+		// dead-letter topics — a message lands here on its first handler failure
 		"order-requested-dlq",
 		"payment-requested-dlq",
 		"payment-failed-dlq",

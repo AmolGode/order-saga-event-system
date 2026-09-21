@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka-broker
+spec:
+  serviceName: kafka-broker
+  replicas: 3 # fixed at 3 to match terraform's kafka_broker_count — quorum voters below are hardcoded to these 3 pod names
+  selector:
+    matchLabels:
+      app: kafka-broker
+  template:
+    metadata:
+      labels:
+        app: kafka-broker
+    spec:
+      # Kafka node group is tainted (dedicated=kafka:NoSchedule, see terraform
+      # outputs.tf) specifically so only broker pods land there, not app pods.
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: kafka
+          effect: NoSchedule
+      nodeSelector:
+        role: kafka
+      containers:
+        - name: kafka
+          image: apache/kafka:4.3.1
+          # KAFKA_NODE_ID and KAFKA_ADVERTISED_LISTENERS must be unique per
+          # pod. The official image has no ordinal-awareness, so derive both
+          # from $HOSTNAME (StatefulSet guarantees kafka-broker-0/-1/-2) and
+          # exec the image's real entrypoint.
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export KAFKA_NODE_ID=${HOSTNAME##*-}
+              export KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://${HOSTNAME}.kafka-broker:9092"
+              exec /etc/kafka/docker/run
+          ports:
+            - containerPort: 9092
+            - containerPort: 9093
+          env:
+            # All 3 pods must format their storage with the SAME cluster ID
+            # on first boot to be able to join one Raft quorum together.
+            # Locally this was a single combined broker+controller with no
+            # peers to agree with, so docker-compose never needed to set
+            # this — the image just generated one for itself. A real
+            # multi-broker quorum can't do that.
+            - name: CLUSTER_ID
+              value: "uAnPA8ZrRpsNKRbQ7JmdHg"
+            - name: KAFKA_PROCESS_ROLES
+              value: broker,controller
+            - name: KAFKA_LISTENERS
+              value: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: CONTROLLER
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "0@kafka-broker-0.kafka-broker:9093,1@kafka-broker-1.kafka-broker:9093,2@kafka-broker-2.kafka-broker:9093"
+            # RF=3/min-ISR=2 replaces local's RF=1 — there's only 1 broker
+            # locally, so replication wasn't possible there. A real 3-broker
+            # cluster should actually survive a broker loss.
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "3"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "3"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "2"
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            - name: KAFKA_NUM_PARTITIONS
+              value: "3"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "false"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          readinessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /var/lib/kafka/data
+  volumeClaimTemplates:
+    # Unlike the Postgres StatefulSets (replicas: 1, one hand-written PVC),
+    # 3 broker replicas each need their own volume — volumeClaimTemplates
+    # generates one PVC per pod automatically (kafka-data-kafka-broker-0, -1, -2).
+    - metadata:
+        name: kafka-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi

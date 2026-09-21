@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service-worker
+  template:
+    metadata:
+      labels:
+        app: payment-service-worker
+    spec:
+      containers:
+        - name: payment-service-worker
+          image: order-saga-event-system-payment-service-worker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9100
+          envFrom:
+            - secretRef:
+                name: payment-service-worker-secret
+          env:
+            - name: POSTGRES_HOST
+              value: payment-db
+            - name: KAFKA_BROKERS
+              value: kafka-broker:9092
+            - name: KAFKA_GROUP_ID
+              value: payment-service-worker
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9100
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9100
+            initialDelaySeconds: 10
+            periodSeconds: 15

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service-worker
+  template:
+    metadata:
+      labels:
+        app: analytics-service-worker
+    spec:
+      containers:
+        - name: analytics-service-worker
+          image: order-saga-event-system-analytics-service-worker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9100
+          envFrom:
+            - secretRef:
+                name: analytics-service-worker-secret
+          env:
+            - name: POSTGRES_HOST
+              value: analytics-db
+            - name: KAFKA_BROKERS
+              value: kafka-broker:9092
+            - name: KAFKA_GROUP_ID
+              value: analytics-workers
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9100
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9100
+            initialDelaySeconds: 10
+            periodSeconds: 15

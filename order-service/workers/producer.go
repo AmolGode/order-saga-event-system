@@ -22,15 +22,13 @@ func PublishEvent(topic string, payload interface{}) error {
 	if err != nil {
 		return err
 	}
-	return PublishRaw(topic, value, nil)
+	return PublishRaw(topic, value)
 }
 
-// PublishRaw republishes an already-serialized message, optionally carrying
-// headers (used for the retry-count header on retry/DLQ republishing).
-func PublishRaw(topic string, value []byte, headers []kafka.Header) error {
+// PublishRaw republishes an already-serialized message as-is.
+func PublishRaw(topic string, value []byte) error {
 	return producer.Produce(&kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Value:          value,
-		Headers:        headers,
 	}, nil)
 }

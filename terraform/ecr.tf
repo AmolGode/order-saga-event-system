@@ -1,7 +1,12 @@
-# One repo per image order-service actually builds. Extend this map when the
-# other services' k8s manifests get built out.
+# One repo per image each service builds. notification-service has no repo
+# since it doesn't exist in this codebase.
 locals {
-  ecr_repos = ["order-service-api", "order-service-worker"]
+  ecr_repos = [
+    "order-service-api", "order-service-worker",
+    "inventory-service-api", "inventory-service-worker",
+    "payment-service-api", "payment-service-worker",
+    "analytics-service-api", "analytics-service-worker",
+  ]
 }
 
 resource "aws_ecr_repository" "this" {

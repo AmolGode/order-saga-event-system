@@ -12,6 +12,11 @@ module "eks" {
   # Tighten this to your IP range before this is anything but a throwaway env.
   cluster_endpoint_public_access = true
 
+  # Without this, the module won't grant the applying IAM principal any
+  # access to the cluster's Kubernetes API — you'd get a cluster you can't
+  # `kubectl` into without a manual access-entry step afterward.
+  enable_cluster_creator_admin_permissions = true
+
   eks_managed_node_groups = {
     # Django/Go app pods — stateless, cheap to interrupt, so Spot makes sense.
     app = {

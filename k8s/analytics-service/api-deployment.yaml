@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service-api
+  template:
+    metadata:
+      labels:
+        app: analytics-service-api
+    spec:
+      containers:
+        - name: analytics-service-api
+          # Placeholder — for real EKS this must be the ECR repo URL from
+          # `terraform output ecr_repository_urls`, with a real build tag
+          # (git SHA or build number), not :latest. Add this repo to
+          # terraform/ecr.tf's ecr_repos list before pushing.
+          image: order-saga-event-system-analytics-service-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: analytics-service-api-secret
+          env:
+            - name: POSTGRES_HOST
+              value: analytics-db
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz/
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz/
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15

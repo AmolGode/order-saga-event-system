@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-broker
+spec:
+  clusterIP: None # headless — StatefulSet pods need stable per-pod DNS (kafka-broker-0, -1, -2) for KRaft quorum voters
+  selector:
+    app: kafka-broker
+  ports:
+    - name: plaintext
+      port: 9092
+      targetPort: 9092
+    - name: controller
+      port: 9093
+      targetPort: 9093
