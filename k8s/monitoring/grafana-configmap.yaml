@@ -1,0 +1,107 @@
+# Mirrors monitoring/grafana/provisioning/ and monitoring/grafana/dashboards/
+# from the local setup exactly — same datasource uid, same dashboard (the
+# already-trimmed 2-panel version), so nothing here needed re-deciding, just
+# porting over. Keep this in sync by hand if the local dashboard JSON changes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource
+data:
+  datasource.yml: |
+    apiVersion: 1
+
+    datasources:
+      - name: Prometheus
+        uid: prometheus-ds
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+data:
+  dashboard.yml: |
+    apiVersion: 1
+
+    providers:
+      - name: saga-dashboards
+        folder: Order Saga
+        type: file
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-saga-overview
+data:
+  saga-overview.json: |
+    {
+      "title": "Order Saga Overview",
+      "uid": "saga-overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "timezone": "browser",
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "10s",
+      "templating": { "list": [] },
+      "annotations": { "list": [] },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Order API requests/sec",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+              "expr": "sum(rate(django_http_requests_total_by_view_transport_method_total{job=\"order-service-api\"}[1m])) by (view)",
+              "legendFormat": "{{view}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+        },
+        {
+          "id": 2,
+          "title": "DB reads/writes per sec, per service",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+              "expr": "sum(rate(django_db_query_duration_seconds_count[1m])) by (job)",
+              "legendFormat": "{{job}} - queries (api)"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+              "expr": "sum(rate(db_write_duration_seconds_count[1m])) by (job)",
+              "legendFormat": "{{job}} - writes (worker)"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "qps" }, "overrides": [] }
+        },
+        {
+          "id": 3,
+          "title": "Kafka consumer lag per group",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
+              "expr": "sum(kafka_consumergroup_lag) by (consumergroup)",
+              "legendFormat": "{{consumergroup}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+        }
+      ]
+    }

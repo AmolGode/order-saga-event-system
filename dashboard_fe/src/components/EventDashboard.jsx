@@ -6,6 +6,7 @@ import Pagination, { PAGE_SIZE } from './Pagination';
 export default function EventDashboard() {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState(null);
+  const [searchMode, setSearchMode] = useState('order_id'); // order_id is the id you actually have on hand; event_id is for tracing a specific hop
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState(null);
   const [journey, setJourney] = useState(null); // { orderId, hops }
@@ -28,10 +29,12 @@ export default function EventDashboard() {
     setSearchError(null);
     if (!value) return;
 
-    fetchJourney({ eventId: value })
+    const query = searchMode === 'order_id' ? { orderId: value } : { eventId: value };
+
+    fetchJourney(query)
       .then((hops) => {
         if (!hops.length) {
-          setSearchError(`No events found for event_id “${value}”.`);
+          setSearchError(`No events found for ${searchMode} “${value}”.`);
           return;
         }
         setJourney({ orderId: hops[0].order_id, hops });
@@ -43,13 +46,27 @@ export default function EventDashboard() {
     <section>
       <div className="view-head">
         <h2>Event Dashboard</h2>
-        <span className="hint">Paste the event_id from an order API response to trace its journey.</span>
+        <span className="hint">
+          {searchMode === 'order_id'
+            ? 'Paste the order_id from a create-order response to trace its journey.'
+            : 'Paste the event_id of one specific hop to trace its journey.'}
+        </span>
       </div>
 
       <div className="event-search-panel">
         <div className="search-box">
-          <label htmlFor="event-search">event_id</label>
+          <label htmlFor="event-search">{searchMode}</label>
           <div className="search-row">
+            <select
+              value={searchMode}
+              onChange={(e) => {
+                setSearchMode(e.target.value);
+                setSearchError(null);
+              }}
+            >
+              <option value="order_id">order_id</option>
+              <option value="event_id">event_id</option>
+            </select>
             <input
               id="event-search"
               type="text"

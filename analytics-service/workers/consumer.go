@@ -26,7 +26,6 @@ func StartConsumer(cfg Config, db *DB) {
 
 	consumer.SubscribeTopics([]string{
 		"order-requested",
-		"inventory-checked",
 		"payment-requested",
 		"inventory-failed",
 		"payment-success",

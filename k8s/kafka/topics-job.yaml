@@ -2,6 +2,15 @@
 # false, same as docker-compose) — every topic the services actually publish
 # to/consume from (grepped from the Go workers' source, including the DLQ
 # topics the retry/DLQ pattern writes to) has to be created explicitly.
+#
+# Partition counts are tiered by expected volume for a 10k/sec load test, not
+# uniform: the main pipeline (order-requested through payment-success) needs
+# enough partitions to actually parallelize across that many worker replicas,
+# while failure/DLQ topics stay small since they're low-volume by design.
+# Replication factor 3 + min.insync.replicas=2 on every topic (not just the
+# broker's internal transaction/offset logs) means one broker going down
+# doesn't lose data or block writes — RF=1 (fine for the single-broker local
+# setup) can't survive that on a real 3-broker cluster.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -25,23 +34,19 @@ spec:
                 sleep 5
               done
 
-              for topic in \
-                order-requested \
-                payment-requested \
-                inventory-checked \
-                inventory-failed \
-                payment-success \
-                payment-failed \
-                order-requested-dlq \
-                payment-requested-dlq \
-                inventory-failed-dlq \
-                payment-success-dlq \
-                payment-failed-dlq \
-              ; do
-                echo "creating topic: $topic"
+              # topic:partitions — main pipeline gets 10 to match the 10k/sec
+              # baseline, failure topics get 3 (much lower volume), DLQ
+              # topics get 2 (rare — only after 3 failed retries).
+              TOPICS="order-requested:10 payment-requested:10 payment-success:10 inventory-failed:3 payment-failed:3 order-requested-dlq:2 inventory-failed-dlq:2 payment-requested-dlq:2 payment-success-dlq:2 payment-failed-dlq:2"
+
+              for entry in $TOPICS; do
+                topic="${entry%%:*}"
+                partitions="${entry##*:}"
+                echo "creating topic: $topic (partitions=$partitions)"
                 /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
                   --bootstrap-server "$BOOTSTRAP" \
                   --topic "$topic" \
-                  --partitions 3 \
-                  --replication-factor 3
+                  --partitions "$partitions" \
+                  --replication-factor 3 \
+                  --config min.insync.replicas=2
               done

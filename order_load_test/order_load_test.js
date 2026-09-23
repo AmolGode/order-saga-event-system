@@ -8,15 +8,37 @@ import { check } from 'k6';
 // request completes, and slows down exactly when the server is under load
 // (the opposite of what you want from a load test). This executor instead
 // auto-scales VUs (up to maxVUs) to hold `rate` steady regardless of latency.
+// BASE_URL: run locally with no env set (defaults to the docker-compose
+// port), or pass -e BASE_URL=http://order-service-api:8000 when running
+// against a real cluster (see k8s/k6-operator/testrun.yaml, which sets this
+// to the in-cluster Service DNS name — there's no localhost:8100 on EKS).
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8100';
+
 export const options = {
   scenarios: {
     saga_load: {
       executor: 'constant-arrival-rate',
-      rate: 1000, // target: 1000 requests/sec
+      // --- REAL TARGET (uncomment for the actual AWS/k6-operator run) ---
+      // rate: 10000, // target: 10k requests/sec — when run via k6-operator, this is the TOTAL across all runner pods, split evenly by parallelism
+      // timeUnit: '1s',
+      // duration: '2m',
+      // Sized for 10k/sec, not the old 1k/sec target. If actual latency
+      // under load is higher than expected, k6 will hit maxVUs before
+      // reaching `rate` and silently under-deliver — check the
+      // `dropped_iterations` metric in the summary and raise these further
+      // if it's non-zero.
+      // preAllocatedVUs: 3000,
+      // maxVUs: 20000,
+
+      // --- LOCAL DEMO (docker-compose only has 4 gunicorn workers — this
+      // rate stays under that ceiling so it runs clean with ~0 dropped
+      // iterations, good for a recording. Switch back to the block above
+      // before the real AWS run.) ---
+      rate: 10,
       timeUnit: '1s',
       duration: '2m',
-      preAllocatedVUs: 200, // VUs k6 starts with
-      maxVUs: 2000, // ceiling k6 can grow to if responses get slow
+      preAllocatedVUs: 10,
+      maxVUs: 50,
     },
   },
 };
@@ -43,10 +65,7 @@ export default function () {
   });
 
   // http.post(url, body, params) — a single HTTP request.
-  // localhost:8100 = the host-published port from docker-compose.yml
-  // ("8100:8000"), so this works whether k6 runs natively on your Mac or in
-  // Docker Desktop's default bridge network.
-  const res = http.post('http://localhost:8100/orders/create_order/', payload, {
+  const res = http.post(`${BASE_URL}/orders/create_order/`, payload, {
     headers: { 'Content-Type': 'application/json' },
   });
 

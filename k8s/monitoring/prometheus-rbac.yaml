@@ -1,0 +1,31 @@
+# Prometheus uses kubernetes_sd_configs (pod-based service discovery) instead
+# of static targets — with KEDA scaling workers to 2-10 replicas dynamically,
+# a static target per service would only ever hit one pod behind the Service,
+# missing every other replica. Discovery needs the API server to list/watch
+# pods across the cluster, which needs its own RBAC.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: default

@@ -74,7 +74,7 @@ func deriveStatus(topic string) string {
 		return "DEAD_LETTER"
 	case topic == "order-requested" || topic == "payment-requested":
 		return "REQUESTED"
-	case topic == "inventory-checked" || topic == "payment-success":
+	case topic == "payment-success":
 		return "SUCCESS"
 	case topic == "inventory-failed" || topic == "payment-failed":
 		return "FAILED"

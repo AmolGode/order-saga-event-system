@@ -11,5 +11,5 @@ import (
 // safety.
 func handleFailure(msg *kafka.Message) error {
 	topic := *msg.TopicPartition.Topic
-	return PublishRaw(topic+"-dlq", msg.Value)
+	return PublishRaw(topic+"-dlq", string(msg.Key), msg.Value)
 }

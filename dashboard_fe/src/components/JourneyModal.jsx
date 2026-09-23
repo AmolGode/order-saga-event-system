@@ -11,6 +11,23 @@ function severityOf(topic) {
   return '';
 }
 
+// One combined, readable title per hop: "topic & what actually happened" —
+// matches each service's real Kafka subscription list, not a guess.
+// payment-failed fans out to two independent consumers (release stock +
+// mark the order cancelled), so both actions are named.
+function titleOf(topic) {
+  if (topic.endsWith('-dlq')) return `${topic} — needs manual replay`;
+  const actions = {
+    'order-requested': 'inventory reservation',
+    'payment-requested': 'payment processing',
+    'payment-success': 'order confirmed',
+    'payment-failed': 'inventory released & order cancelled',
+    'inventory-failed': 'order cancelled',
+  };
+  const action = actions[topic];
+  return action ? `${topic} & ${action}` : topic;
+}
+
 function outcomeFor(hops) {
   const last = hops[hops.length - 1].topic;
   if (last === 'payment-success') return { cls: 'success', text: 'Order confirmed.' };
@@ -58,6 +75,14 @@ export default function JourneyModal({ orderId, hops, onClose }) {
 
         {hasHops && (
           <>
+            <div className="flow-strip">
+              {hops.map((h, idx) => (
+                <div className="flow-step" key={h.event_id}>
+                  <span className={`flow-chip ${severityOf(h.topic)}`}>{titleOf(h.topic)}</span>
+                  {idx < hops.length - 1 && <span className="flow-arrow">&rarr;</span>}
+                </div>
+              ))}
+            </div>
             <ul className="timeline">
               {hops.map((h, idx) => {
                 const delta = idx > 0 ? new Date(h.timestamp) - new Date(hops[idx - 1].timestamp) : null;

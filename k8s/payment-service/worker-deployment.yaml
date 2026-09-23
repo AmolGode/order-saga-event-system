@@ -11,6 +11,9 @@ spec:
     metadata:
       labels:
         app: payment-service-worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
     spec:
       containers:
         - name: payment-service-worker

@@ -16,26 +16,23 @@ func handleOrderRequestedEvent(db *DB, orderEvent OrderRequestedEvent) error {
 		// order-service/workers/handlers.go), so reuse that instead of a
 		// separate failure channel. The message still goes to
 		// order-requested-dlq afterward for forensics/replay.
-		if pubErr := PublishEvent("inventory-failed", nextEvent(orderEvent, "inventory-failed")); pubErr != nil {
+		if pubErr := PublishEvent("inventory-failed", orderEvent.OrderID, nextEvent(orderEvent, "inventory-failed")); pubErr != nil {
 			log.Println("failed to notify order-service of processing failure:", pubErr)
 		}
 		return err
 	}
 
 	if status == StockInsufficient {
-		return PublishEvent("inventory-failed", nextEvent(orderEvent, "inventory-failed"))
+		return PublishEvent("inventory-failed", orderEvent.OrderID, nextEvent(orderEvent, "inventory-failed"))
 	}
 
-	// Stock is already reserved and safely recorded at this point. If either
+	// Stock is already reserved and safely recorded at this point. If the
 	// publish below fails, don't force "inventory-failed" — that would tell
 	// order-service to cancel while stock is genuinely held, with nothing to
 	// release it (ReleaseStock only runs on payment-failed). Let it hit the
 	// DLQ instead; ReserveStock's idempotency check means a replay picks up
 	// exactly where this left off.
-	if err := PublishEvent("inventory-checked", nextEvent(orderEvent, "inventory-checked")); err != nil {
-		return err
-	}
-	return PublishEvent("payment-requested", nextEvent(orderEvent, "payment-requested"))
+	return PublishEvent("payment-requested", orderEvent.OrderID, nextEvent(orderEvent, "payment-requested"))
 }
 
 // nextEvent derives the downstream event_id deterministically from the

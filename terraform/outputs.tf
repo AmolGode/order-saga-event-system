@@ -7,13 +7,8 @@ output "configure_kubectl" {
   value       = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name}"
 }
 
-output "order_db_proxy_endpoint" {
-  description = "POSTGRES_HOST for order-service-api/worker to use instead of the raw RDS endpoint."
-  value       = aws_db_proxy.order_db.endpoint
-}
-
 output "db_endpoints" {
-  description = "Direct RDS endpoints — used for inventory/payment/analytics, which don't go through a proxy."
+  description = "Direct RDS endpoints for all 4 databases — use these as POSTGRES_HOST. No RDS Proxy in front of any of them; PgBouncer (see docker-compose.yml) already handles order-db's connection pooling."
   value       = { for k, v in aws_db_instance.this : k => v.endpoint }
 }
 

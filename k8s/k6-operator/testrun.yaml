@@ -1,0 +1,33 @@
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: order-saga-load-test
+spec:
+  parallelism: 5 # 5 runner pods sharing the script's rate: 10000 evenly (~2k/sec each), via k6's execution segments
+  script:
+    configMap:
+      name: order-load-test-script
+      file: order_load_test.js
+  runner:
+    # In-cluster Service DNS, not the NodePort — these pods run inside the
+    # same cluster as order-service-api, so there's no reason to go back out
+    # through a node's external IP just to come back in.
+    env:
+      - name: BASE_URL
+        value: http://order-service-api:8000
+    # Kafka's node group is tainted (dedicated=kafka:NoSchedule, see
+    # terraform/eks.tf) specifically to keep non-broker pods off it. No
+    # toleration is set here on purpose — combined with this nodeSelector,
+    # runner pods can only land on the app node group, never the Kafka one.
+    nodeSelector:
+      role: app
+    # Starting point for ~2k req/sec per pod (5 pods x 2k = 10k/sec total) —
+    # watch actual CPU usage during a real run and adjust; k6 is CPU-bound
+    # doing JSON serialization and TLS/HTTP overhead per request, not memory-bound.
+    resources:
+      requests:
+        cpu: "1"
+        memory: "512Mi"
+      limits:
+        cpu: "2"
+        memory: "1Gi"

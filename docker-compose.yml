@@ -238,6 +238,12 @@ services:
       - "9308:9308"
     depends_on:
       - kafka-broker
+    # depends_on only waits for the container to start, not for Kafka to
+    # actually be listening (KRaft takes 10-30s+) — kafka-exporter fails
+    # fatally on its first connection attempt and exits with no internal
+    # retry, so without this it just stays Exited forever once it loses that
+    # race, even though the broker comes up fine seconds later.
+    restart: on-failure
 
   prometheus:
     image: prom/prometheus:latest

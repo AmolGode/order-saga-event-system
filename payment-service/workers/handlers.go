@@ -19,7 +19,7 @@ func handlePaymentRequestedEvent(db *DB, event OrderRequestedEvent) error {
 		// order-service/workers/handlers.go), so reuse that instead of a
 		// separate failure channel. The message still goes to
 		// payment-requested-dlq afterward for forensics/replay.
-		if pubErr := PublishEvent("payment-failed", nextEvent(event, "payment-failed")); pubErr != nil {
+		if pubErr := PublishEvent("payment-failed", event.OrderID, nextEvent(event, "payment-failed")); pubErr != nil {
 			log.Println("failed to notify order-service of processing failure:", pubErr)
 		}
 		return err
@@ -32,9 +32,9 @@ func handlePaymentRequestedEvent(db *DB, event OrderRequestedEvent) error {
 	// "payment-failed" here could falsely cancel an order whose payment
 	// actually succeeded.
 	if status == "SUCCESS" {
-		return PublishEvent("payment-success", nextEvent(event, "payment-success"))
+		return PublishEvent("payment-success", event.OrderID, nextEvent(event, "payment-success"))
 	}
-	return PublishEvent("payment-failed", nextEvent(event, "payment-failed"))
+	return PublishEvent("payment-failed", event.OrderID, nextEvent(event, "payment-failed"))
 }
 
 // simulatePaymentGatewayCharge stands in for a real payment gateway call.

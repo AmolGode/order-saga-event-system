@@ -1,0 +1,37 @@
+# Reads consumer group lag from the broker — this is the same signal KEDA's
+# ScaledObjects scale on (k8s/keda/), so having it in Prometheus/Grafana too
+# means you can actually see *why* KEDA is scaling a worker up or down during
+# the load test, not just that it did.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-exporter
+  template:
+    metadata:
+      labels:
+        app: kafka-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9308"
+    spec:
+      containers:
+        - name: kafka-exporter
+          image: danielqsj/kafka-exporter:latest
+          args:
+            - --kafka.server=kafka-broker-0.kafka-broker:9092
+            - --kafka.server=kafka-broker-1.kafka-broker:9092
+            - --kafka.server=kafka-broker-2.kafka-broker:9092
+          ports:
+            - containerPort: 9308
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

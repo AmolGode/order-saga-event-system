@@ -1,0 +1,18 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-service-worker-scaler
+spec:
+  scaleTargetRef:
+    name: order-service-worker
+  minReplicaCount: 2
+  maxReplicaCount: 10 # matches payment-success's 10 partitions, the largest topic this group consumes
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka-broker-0.kafka-broker:9092,kafka-broker-1.kafka-broker:9092,kafka-broker-2.kafka-broker:9092
+        consumerGroup: order-service-worker
+        # topic intentionally omitted — sums lag across every topic this
+        # group subscribes to (payment-success, payment-failed, inventory-failed)
+        lagThreshold: "50"
+        offsetResetPolicy: earliest

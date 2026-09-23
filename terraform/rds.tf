@@ -2,20 +2,23 @@
 # passwords by default, so nothing in the app config needs to change to
 # point at RDS instead of the docker-compose Postgres containers.
 locals {
+  # instance_class pinned to db.t3.micro and allocated_storage capped at 20
+  # on all 4 — Free Tier rejects both the previous larger instance classes
+  # (confirmed: FreeTierRestrictionError) and anything over 20GB storage.
   databases = {
     order = {
       db_name           = "orders"
       username          = "order_user"
       password          = var.order_db_password
-      instance_class    = var.order_db_instance_class
-      allocated_storage = 100
+      instance_class    = "db.t3.micro"
+      allocated_storage = 20
       iops              = 6000 # order-db takes the direct load-test traffic — provisioned IOPS, not gp3 baseline
     }
     inventory = {
       db_name           = "inventory"
       username          = "inventory_user"
       password          = var.inventory_db_password
-      instance_class    = var.secondary_db_instance_class
+      instance_class    = "db.t3.micro"
       allocated_storage = 20
       iops              = null
     }
@@ -23,7 +26,7 @@ locals {
       db_name           = "payments"
       username          = "payment_user"
       password          = var.payment_db_password
-      instance_class    = var.secondary_db_instance_class
+      instance_class    = "db.t3.micro"
       allocated_storage = 20
       iops              = null
     }
@@ -31,7 +34,7 @@ locals {
       db_name           = "analytics"
       username          = "analytics_user"
       password          = var.analytics_db_password
-      instance_class    = var.secondary_db_instance_class
+      instance_class    = "db.t3.micro"
       allocated_storage = 20
       iops              = null
     }
@@ -40,7 +43,7 @@ locals {
 
 resource "aws_security_group" "rds" {
   name_prefix = "${var.cluster_name}-rds-"
-  description = "Allow Postgres from the EKS cluster's nodes/pods only."
+  description = "Allow Postgres from the EKS cluster nodes and pods only."
   vpc_id      = module.vpc.vpc_id
 
   ingress {
